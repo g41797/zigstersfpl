@@ -4,8 +4,10 @@ const Strings   = []String;
 const ArrayList = std.ArrayList;
 const Lines     = ArrayList([]u8);
 
+const Main = @This();
+
 pub fn main() !void {
-    try run();
+    try Main.run();
     return;
 }
 
@@ -17,12 +19,12 @@ pub fn run() !void {
             _ = gpa.deinit();
         }
 
-    const cwd_path      = std.fs.cwd().realpathAlloc(allocator, ".") catch |err| return err;
-    defer allocator.free(cwd_path);
+    const cwd_path  = try std.fs.cwd().realpathAlloc(allocator, ".");
+        defer allocator.free(cwd_path);
 
-    var paths   	= [_]String{ cwd_path, "src/firstlang.log" };
-    const file_path     = try std.fs.path.join(allocator, &paths);
-    defer allocator.free(file_path);
+    var paths   = [_]String{ cwd_path, "src/firstlang.log" };
+    const file_path = try std.fs.path.join(allocator, &paths);
+        defer allocator.free(file_path);
 
     _ = try process(allocator, file_path);
 
@@ -79,5 +81,5 @@ pub fn collect(allocator: std.mem.Allocator, file_path: []const u8) !Strings {
 }
 
 test "run test" {
-    try run();
+        try Main.run();
 }
