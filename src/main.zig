@@ -4,7 +4,7 @@ const Strings   = []String;
 const ArrayList = std.ArrayList;
 const Lines     = ArrayList([]u8);
 
-const Main = @This();
+const Main      = @This();
 
 pub fn main() !void {
     try Main.run();
