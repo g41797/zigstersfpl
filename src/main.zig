@@ -5,12 +5,13 @@ const Strings = []String;
 const Langs = []FirstLang;
 const ArrayList = std.ArrayList;
 const Lines = ArrayList([]u8);
+const Order = std.math.Order;
 
 pub const FirstLang = struct {
     name: [32:0]u8 = undefined,
-    len: usize = undefined,
-    year: ?u16 = undefined,
-    zigsters: u16 = undefined,
+    len: usize = 0,
+    year: ?u16 = null,
+    zigsters: u16 = 0,
 
     pub fn clear(fl: *FirstLang) void {
         fl.year = null;
@@ -18,7 +19,41 @@ pub const FirstLang = struct {
         @memset(&fl.name, 0);
         fl.len = 0;
     }
+
+    pub fn setname(fl: *FirstLang, name: String) void {
+        const dst = fl.name[0..name.len];
+        @memcpy(dst, name);
+        fl.len = name.len;
+        return;
+    }
 };
+
+fn alreadyAscOrder(context: void, a: FirstLang, b: FirstLang) bool {
+    _ = context;
+
+    const astr = a.name[0..a.len];
+    const bstr = b.name[0..b.len];
+
+    const order = std.mem.order(u8, astr, bstr);
+
+    if ((a.year == null) and (b.year == null)) {
+        return !(order == .gt);
+    }
+
+    if (a.year == null) {
+        return false;
+    }
+
+    if (b.year == null) {
+        return true;
+    }
+
+    if (a.year.? == b.year.?) {
+        return !(order == .gt);
+    }
+
+    return (a.year.? < b.year.?);
+}
 
 pub fn main() !void {
     _ = try run();
@@ -57,6 +92,8 @@ pub fn process(allocator: std.mem.Allocator, file_path: []const u8) !void {
     defer {
         allocator.free(langs);
     }
+
+    std.sort.insertion(FirstLang, langs, {}, alreadyAscOrder);
 
     _ = try print(allocator, langs);
 
@@ -129,7 +166,6 @@ pub fn parse(allocator: std.mem.Allocator, strings: Strings) !Langs {
 }
 
 pub fn print(allocator: std.mem.Allocator, langs: Langs) !void {
-
     _ = allocator;
 
     const stdout_file = std.io.getStdOut().writer();
@@ -154,4 +190,37 @@ pub fn print(allocator: std.mem.Allocator, langs: Langs) !void {
 
 test "run test" {
     _ = try run();
+}
+
+test "cmp test" {
+    const any: void = undefined;
+
+    var la: FirstLang = .{};
+    la.setname("12345");
+    var lb: FirstLang = .{};
+    lb.setname("12345");
+    try testing.expect(alreadyAscOrder(any, la, lb));
+
+    la.setname("1234");
+    try testing.expect(alreadyAscOrder(any, la, lb));
+
+    lb.setname("123");
+    try testing.expect(!alreadyAscOrder(any, la, lb));
+
+    la.setname("123");
+    la.year = 2024;
+    try testing.expect(alreadyAscOrder(any, la, lb));
+
+    la.year = null;
+    lb.year = 2024;
+    try testing.expect(!alreadyAscOrder(any, la, lb));
+
+    la.year = 2024;
+    try testing.expect(alreadyAscOrder(any, la, lb));
+
+    lb.setname("12");
+    try testing.expect(!alreadyAscOrder(any, la, lb));
+
+    lb.year = 2025;
+    try testing.expect(alreadyAscOrder(any, la, lb));
 }
