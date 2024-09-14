@@ -28,13 +28,24 @@ pub const FirstLang = struct {
     }
 };
 
+fn alreadyAscNameOrder(context: void, a: FirstLang, b: FirstLang) bool {
+    _ = context;
+
+    const aname = a.name[0..a.len];
+    const bname = b.name[0..b.len];
+
+    const order = std.mem.order(u8, aname, bname);
+
+    return !(order == .gt);
+}
+
 fn alreadyAscOrder(context: void, a: FirstLang, b: FirstLang) bool {
     _ = context;
 
-    const astr = a.name[0..a.len];
-    const bstr = b.name[0..b.len];
+    const aname = a.name[0..a.len];
+    const bname = b.name[0..b.len];
 
-    const order = std.mem.order(u8, astr, bstr);
+    const order = std.mem.order(u8, aname, bname);
 
     if ((a.year == null) and (b.year == null)) {
         return !(order == .gt);
@@ -54,6 +65,21 @@ fn alreadyAscOrder(context: void, a: FirstLang, b: FirstLang) bool {
 
     return (a.year.? < b.year.?);
 }
+
+fn alreadyDscZgsOrder(context: void, a: FirstLang, b: FirstLang) bool {
+    _ = context;
+
+    const aname = a.name[0..a.len];
+    const bname = b.name[0..b.len];
+
+    if(a.zigsters == b.zigsters) {
+        const order = std.mem.order(u8, aname, bname);
+        return !(order == .gt);
+    }
+
+    return (a.zigsters > b.zigsters);
+}
+
 
 pub fn main() !void {
     _ = try run();
@@ -92,8 +118,6 @@ pub fn process(allocator: std.mem.Allocator, file_path: []const u8) !void {
     defer {
         allocator.free(langs);
     }
-
-    std.sort.insertion(FirstLang, langs, {}, alreadyAscOrder);
 
     _ = try print(allocator, langs);
 
@@ -165,25 +189,106 @@ pub fn parse(allocator: std.mem.Allocator, strings: Strings) !Langs {
     return larr.toOwnedSlice();
 }
 
-pub fn print(allocator: std.mem.Allocator, langs: Langs) !void {
-    _ = allocator;
+pub fn compute(allocator: std.mem.Allocator, langs: Langs) !Langs {
 
+    var larr = ArrayList(FirstLang).init(allocator);
+    defer larr.deinit();
+
+    var lookup = std.StringHashMap(u16).init(allocator);
+
+    defer {
+        var it = lookup.iterator();
+        while (it.next()) |kv| {
+            allocator.free(kv.key_ptr.*);
+        }
+        lookup.deinit();
+    }
+
+    for (langs) |fl| {
+        const name: []const u8 = fl.name[0..fl.len];
+
+        const flptr = lookup.getPtr(name);
+        if(flptr == null) {
+            try lookup.put(try allocator.dupe(u8, name), 1);
+        } else {
+            flptr.?.* += @as(u16,1);
+        }
+    }
+
+    var it = lookup.iterator();
+    while (it.next()) |kv| {
+        var fl: FirstLang = .{};
+        fl.clear();
+        fl.setname(kv.key_ptr.*);
+        fl.zigsters = kv.value_ptr.*;
+        try larr.append(fl);
+    }
+
+    const comp = larr.toOwnedSlice();
+    return comp;
+}
+
+pub fn print(allocator: std.mem.Allocator, langs: Langs) !void {
     const stdout_file = std.io.getStdOut().writer();
     var bw = std.io.bufferedWriter(stdout_file);
     const out = bw.writer();
 
-    for (langs) |fl| {
-        const name = fl.name[0..fl.len];
-        try out.print("{s} ", .{name});
+    std.sort.insertion(FirstLang, langs, {}, alreadyAscOrder);
+
+    var lastWithYear: FirstLang = .{};
+
+    for (langs, 0..langs.len) |fl, indx| {
         if (fl.year == null) {
-            try out.print(" N/A ", .{});
-        } else {
-            try out.print(" {d} ", .{fl.year.?});
+            lastWithYear = langs[indx - 1];
+            break;
         }
-        try out.print(" {d} \n", .{fl.zigsters});
     }
 
+    const langNames = try allocator.dupe(FirstLang, langs);
+    defer {
+        allocator.free(langNames);
+    }
+
+    std.sort.insertion(FirstLang, langNames, {}, alreadyAscNameOrder);
+
+    const cmpNames = try compute(allocator, langNames);
+    defer {
+        allocator.free(cmpNames);
+    }
+
+    std.sort.insertion(FirstLang, cmpNames, {}, alreadyAscNameOrder);
+
+    std.sort.insertion(FirstLang, cmpNames, {}, alreadyDscZgsOrder);
+
+    try out.print("Participated: {d} Zigsters.\n", .{langs.len});
+    try out.print("Winner: {s} used by {d} Zigsters.\n", .{ cmpNames[0].name[0..cmpNames[0].len],  cmpNames[0].zigsters});
+    try out.print("Oldest: {1s} {0d}.\n", .{ langs[0].year.?, langs[0].name[0..langs[0].len] });
+    try out.print("Newest: {1s} {0d}.\n", .{ lastWithYear.year.?, lastWithYear.name[0..lastWithYear.len] });
+    try out.print("\n\n", .{});
+
+    for (cmpNames) |fl| {
+        const name = fl.name[0..fl.len];
+        try out.print("{s}\t\t{d}\n", .{ name, fl.zigsters });
+    }
+    try out.print("\n\n", .{});
+
     try bw.flush();
+
+    return;
+}
+
+pub fn printlang(fl: FirstLang, out: anytype) !void {
+    if (fl.year == null) {
+        try out.print("\t", .{});
+    } else {
+        try out.print("{d}\t", .{fl.year.?});
+    }
+
+    const name = fl.name[0..fl.len];
+
+    try out.print("{s}\t\t", .{name});
+
+    try out.print("{d}\n", .{fl.zigsters});
 
     return;
 }
