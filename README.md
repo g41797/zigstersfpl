@@ -2,9 +2,7 @@
 
 [![CI](https://github.com/g41797/zigstersfpl/actions/workflows/ci.yml/badge.svg)](https://github.com/g41797/zigstersfpl/actions/workflows/ci.yml)
 
-Repository for [Reddit post](https://www.reddit.com/r/Zig/comments/1fazdl9/what_was_your_first_programming_language/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button)
-
-## Bottom line
+The result of the survey [What was your first programming language?](https://www.reddit.com/r/Zig/comments/1fazdl9/what_was_your_first_programming_language/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button):
 - Participated: 139 Zigsters.
 - Programming languages: 29.
 - Winner: BASIC(47/139).

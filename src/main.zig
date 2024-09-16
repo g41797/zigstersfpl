@@ -258,7 +258,11 @@ pub fn print(allocator: std.mem.Allocator, langs: Langs) !void {
 
     std.sort.insertion(FirstLang, cmpNames, {}, alreadyDscZgsOrder);
 
-    try out.print("## Bottom line\n", .{});
+    // The result of the survey [What was your first programming language?](https://www.reddit.com/r/Zig/comments/1fazdl9/what_was_your_first_programming_language/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button)
+
+    const title = "What was your first programming language?";
+    const url = "https://www.reddit.com/r/Zig/comments/1fazdl9/what_was_your_first_programming_language/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button";
+    try out.print("\nThe result of the survey [{s}]({s}):\n", .{title, url});
     try out.print("- Participated: {d} Zigsters.\n", .{langs.len});
     try out.print("- Programming languages: {d}.\n", .{cmpNames.len});
     try out.print("- Winner: {s}({d}/{d}). \n", .{ cmpNames[0].name[0..cmpNames[0].len], cmpNames[0].zigsters, langs.len });
