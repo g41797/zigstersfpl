@@ -72,14 +72,13 @@ fn alreadyDscZgsOrder(context: void, a: FirstLang, b: FirstLang) bool {
     const aname = a.name[0..a.len];
     const bname = b.name[0..b.len];
 
-    if(a.zigsters == b.zigsters) {
+    if (a.zigsters == b.zigsters) {
         const order = std.mem.order(u8, aname, bname);
         return !(order == .gt);
     }
 
     return (a.zigsters > b.zigsters);
 }
-
 
 pub fn main() !void {
     _ = try run();
@@ -190,7 +189,6 @@ pub fn parse(allocator: std.mem.Allocator, strings: Strings) !Langs {
 }
 
 pub fn compute(allocator: std.mem.Allocator, langs: Langs) !Langs {
-
     var larr = ArrayList(FirstLang).init(allocator);
     defer larr.deinit();
 
@@ -208,10 +206,10 @@ pub fn compute(allocator: std.mem.Allocator, langs: Langs) !Langs {
         const name: []const u8 = fl.name[0..fl.len];
 
         const flptr = lookup.getPtr(name);
-        if(flptr == null) {
+        if (flptr == null) {
             try lookup.put(try allocator.dupe(u8, name), 1);
         } else {
-            flptr.?.* += @as(u16,1);
+            flptr.?.* += @as(u16, 1);
         }
     }
 
@@ -229,6 +227,7 @@ pub fn compute(allocator: std.mem.Allocator, langs: Langs) !Langs {
 }
 
 pub fn print(allocator: std.mem.Allocator, langs: Langs) !void {
+
     const stdout_file = std.io.getStdOut().writer();
     var bw = std.io.bufferedWriter(stdout_file);
     const out = bw.writer();
@@ -260,11 +259,18 @@ pub fn print(allocator: std.mem.Allocator, langs: Langs) !void {
 
     std.sort.insertion(FirstLang, cmpNames, {}, alreadyDscZgsOrder);
 
+    try out.print("\n\n\nBottom line\n", .{});
+    try out.print("___________\n", .{});
+
     try out.print("Participated: {d} Zigsters.\n", .{langs.len});
-    try out.print("Winner: {s} used by {d} Zigsters.\n", .{ cmpNames[0].name[0..cmpNames[0].len],  cmpNames[0].zigsters});
+    try out.print("Programming languages: {d}\n", .{cmpNames.len});
+    try out.print("Winner: {s} used by {d} Zigsters.\n", .{ cmpNames[0].name[0..cmpNames[0].len], cmpNames[0].zigsters });
     try out.print("Oldest: {1s} {0d}.\n", .{ langs[0].year.?, langs[0].name[0..langs[0].len] });
-    try out.print("Newest: {1s} {0d}.\n", .{ lastWithYear.year.?, lastWithYear.name[0..lastWithYear.len] });
+    try out.print("Youngest: {1s} {0d}.\n", .{ lastWithYear.year.?, lastWithYear.name[0..lastWithYear.len] });
     try out.print("\n\n", .{});
+
+    try out.print("\n\n\nBy # of Zigsters\n", .{});
+    try out.print("________________\n", .{});
 
     for (cmpNames) |fl| {
         const name = fl.name[0..fl.len];
@@ -272,14 +278,84 @@ pub fn print(allocator: std.mem.Allocator, langs: Langs) !void {
     }
     try out.print("\n\n", .{});
 
+    try out.print("\n\n\nPer year\n", .{});
+    try out.print("________\n", .{});
+    try printyears(allocator, langs, out);
+
+    try printlangs("Raw data", langs, out);
+
     try bw.flush();
 
     return;
 }
 
+pub fn printyears(allocator: std.mem.Allocator, langs: Langs, out: anytype) !void {
+
+    var sindx: usize = 0;
+    var year: u16 = langs[sindx].year.?;
+    var len: usize = 0;
+
+    for (langs, 0..langs.len) |fl, _| {
+        if (fl.year != null) {
+            if (fl.year.? == year) {
+                len +=1;
+                continue;
+            }
+        }
+
+        if(len == 1) {
+            try printperyear(langs[sindx].year, langs[sindx..sindx + 1], out);
+        } else {
+            const yearNames = try compute(allocator, langs[sindx..sindx + len]);
+            defer {
+                allocator.free(yearNames);
+            }
+            std.sort.insertion(FirstLang, yearNames, {}, alreadyAscNameOrder);
+            try printperyear(langs[sindx].year, yearNames, out);
+        }
+
+        if (fl.year == null) {
+            break;
+        }
+
+        year = fl.year.?;
+        sindx += len;
+        len = 1;
+    }
+}
+
+pub fn printperyear(year: ?u16, langs: Langs, out: anytype) !void {
+
+    if (year == null) {
+        return;
+    }
+
+    for(langs, 0..langs.len) |fl, indx| {
+        if(indx == 0) {
+            try out.print("{d}\t\t", .{year.?});
+        } else {
+            try out.print("    \t\t", .{});
+        }
+
+        try out.print("{s}\t\t", .{fl.name[0..fl.len]});
+        try out.print("{d}\n", .{fl.zigsters});
+    }
+
+
+    return;
+}
+
+pub fn printlangs(group: String, langs: Langs, out: anytype) !void {
+    try out.print("\n{s}\n", .{group});
+    for (langs) |fl| {
+        try printlang(fl, out);
+    }
+    try out.print("\n\n", .{});
+}
+
 pub fn printlang(fl: FirstLang, out: anytype) !void {
     if (fl.year == null) {
-        try out.print("\t", .{});
+        try out.print("    \t", .{});
     } else {
         try out.print("{d}\t", .{fl.year.?});
     }
