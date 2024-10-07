@@ -146,3 +146,4 @@ The result of the survey [What was your first programming language?](https://www
 |2023|JS|1|
 |2024|Rust|1|
 
+![](_icons/CLion_icon.png)
